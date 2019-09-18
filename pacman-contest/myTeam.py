@@ -167,14 +167,12 @@ class DummyAgent(CaptureAgent):
             if loc == goal:
                 if len(path) == 0:
                     return 'Stop'
-                return path[0]
+                return path[0] #move once each time
             if loc not in visited:
                 visited.append(loc)
                 for suc in self.getSuccessors(loc):#pos action
                     if suc not in visited:
                       PQue.push((suc[0], path + [suc[1]]), len(path +[suc[1]])+heuristic(gameState,suc[0]))
-        if goal != self.home:
-            return self.astarSearch(gameState, self.home, self.manhattanHeuristic)
         return 'Stop'
 
     def manhattanHeuristic(position, goal, info={}):
