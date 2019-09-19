@@ -136,7 +136,22 @@ class DummyAgent(CaptureAgent):
     a counter or a dictionary.
     """
         return {'successorScore': 1.0}
+    #get condition of enemies
+    def getOffender(self, gameState):
+        enemies = [gameState.getAgentState(o) for o in self.getOpponents(gameState)]
+        offerder = [a for a in enemies if a.isPacman and a.getPosition() is not None]
+        if len(offerder) == 0:
+            return None
+        else:
+            return offerder
 
+    def getDefender(self, gameState):
+        enemies = [gameState.getAgentState(o) for o in self.getOpponents(gameState)]
+        defenders = [a for a in enemies if a.getPosition() is not None and not a.isPacman]
+        if len(defenders) == 0:
+            return None
+        else:
+            return defenders
     # capsule-search 20190918
     def getcloseCapsule(self, gameState):
         capsules = self.getCapsules(gameState)
