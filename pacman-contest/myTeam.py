@@ -84,10 +84,14 @@ class DummyAgent(CaptureAgent):
         self.home = gameState.getAgentState(self.index).getPosition()  # return
         self.walls = gameState.getWalls().asList()  # walls
         CaptureAgent.registerInitialState(self, gameState)
+        self.phase = 1
 
         '''
     Your initialization code goes here, if you need any.
     '''
+
+    def changePhase(self):
+        self.phase = 2
 
     def getSuccessor(self, gameState, action):
         """
@@ -136,7 +140,17 @@ class DummyAgent(CaptureAgent):
     a counter or a dictionary.
     """
         return {'successorScore': 1.0}
-    #get condition of enemies
+
+    # get middle
+    def getMiddle(self, gameState):
+        if self.red:
+            middle = [((gameState.data.layout.width / 2) - 1, y) for y in range(0, gameState.data.layout.height)]
+        else:
+            middle = [(gameState.data.layout.width / 2, y) for y in range(0, gameState.data.layout.height)]
+        availableMiddle = [a for a in middle if a not in self.walls]
+        return availableMiddle
+
+    # get condition of enemies
     def getOffender(self, gameState):
         enemies = [gameState.getAgentState(o) for o in self.getOpponents(gameState)]
         offerder = [a for a in enemies if a.isPacman and a.getPosition() is not None]
@@ -152,6 +166,7 @@ class DummyAgent(CaptureAgent):
             return None
         else:
             return defenders
+
     # capsule-search 20190918
     def getcloseCapsule(self, gameState):
         capsules = self.getCapsules(gameState)
@@ -182,19 +197,31 @@ class DummyAgent(CaptureAgent):
             if loc == goal:
                 if len(path) == 0:
                     return 'Stop'
-                return path[0] #move once each time
+                return path[0]  # move once each time
             if loc not in visited:
                 visited.append(loc)
-                for suc in self.getSuccessors(loc):#pos action
+                for suc in self.getSuccessors(loc):  # pos action
                     if suc not in visited:
-                      PQue.push((suc[0], path + [suc[1]]), len(path +[suc[1]])+heuristic(gameState,suc[0]))
+                        PQue.push((suc[0], path + [suc[1]]), len(path + [suc[1]]) + heuristic(gameState,loc, suc[0]))
         return 'Stop'
 
-    def manhattanHeuristic(position, goal, info={}):
+    def manhattanHeuristic(self, position, goal, info={}):
         "The Manhattan distance heuristic for a PositionSearchProblem"
-        xy1 = position
-        xy2 = goal
-        return 0
+        x1, y1 = position
+        x2, y2 = goal
+        return abs(x1 - x2) + abs(y1 - y2)
+#20190919
+    def simple_avoidEnemyHeurisitic(self, gameState,position,opponent):
+        enemy = self.getDefender(gameState)
+        avoid = []
+        if enemy is None:
+            return 0
+        for e in enemy:
+            if self.getMazeDistance(position, e.getPosition()) < 4:
+                avoid.append(40*self.getMazeDistance(position, e.getPosition()))
+            else:
+                avoid.append(0)
+        return max(avoid)
 
 
 class OffensiveDummyAgent(DummyAgent):
@@ -208,13 +235,25 @@ class OffensiveDummyAgent(DummyAgent):
         closeCapsule = self.getcloseCapsule(gameState)
         foods = self.getFood(gameState).asList()
         closeFood = self.getCloseFood(gameState)
-        if closeCapsule is not None:
-            return self.astarSearch(gameState, closeCapsule, self.manhattanHeuristic)
-        elif len(foods) > 15:
-            return self.astarSearch(gameState, closeFood, self.manhattanHeuristic)
-        else:
-          return self.astarSearch(gameState, self.home, self.manhattanHeuristic)
-
+        # back to the middle
+        middle = self.getMiddle(gameState)
+        middleDis = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), mi) for mi in middle]
+        closeMiddle = [m for m, d in zip(middle, middleDis) if d == min(middleDis)]
+        # policy
+        if closeCapsule is None and gameState.getAgentState(self.index).getPosition() in middle:
+            self.changePhase()
+        if self.phase == 1:
+            if closeCapsule is not None:
+                return self.astarSearch(gameState, closeCapsule, self.simple_avoidEnemyHeurisitic)
+            elif len(foods) > 15:
+                return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
+            else:
+                return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
+        else:#small greedy algorithm 20190919
+            if gameState.getAgentState(self.index).numCarrying > 3:#if carry greater than 3, return
+                return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
+            else:
+                return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
 
     def getFeatures(self, gameState, action):
         features = util.Counter()
