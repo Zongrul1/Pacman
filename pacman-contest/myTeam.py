@@ -84,16 +84,11 @@ class DummyAgent(CaptureAgent):
         self.home = gameState.getAgentState(self.index).getPosition()  # return
         self.walls = gameState.getWalls().asList()  # walls
         CaptureAgent.registerInitialState(self, gameState)
-        self.phase = 1
+
 
         '''
     Your initialization code goes here, if you need any.
     '''
-
-    def changePhase(self):
-        self.phase = 2
-
-        
     def getSuccessors(self, currentPosition):
         successors = []
         forbidden = self.walls
@@ -150,12 +145,21 @@ class DummyAgent(CaptureAgent):
             return None
         else:
             return closeFood[0]
-
+    # food-search 20190920
+    def getFurtherFood(self, gameState):
+        foods = [food for food in self.getFood(gameState).asList()]
+        foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) for a in foods]
+        closeFood = [f for f, d in zip(foods, foodDistance) if d == max(foodDistance)]
+        if len(closeFood) == 0:
+            return None
+        else:
+            return closeFood[0]
     def astarSearch(self, gameState, goal, heuristic):
         PQue = util.PriorityQueue()
         visited = []
         start = self.getCurrentObservation().getAgentState(self.index).getPosition()
         PQue.push((start, []), 0)
+        enemy = self.getDefender(gameState)
         while not PQue.isEmpty():
             loc, path = PQue.pop()
             if loc == goal:
@@ -166,22 +170,22 @@ class DummyAgent(CaptureAgent):
                 visited.append(loc)
                 for suc in self.getSuccessors(loc):  # pos action
                     if suc not in visited:
-                        PQue.push((suc[0], path + [suc[1]]), len(path + [suc[1]]) + heuristic(gameState,loc, suc[0]))
+                        PQue.push((suc[0], path + [suc[1]]), len(path + [suc[1]]) + heuristic(gameState,suc[0]))
         return 'Stop'
 
-    def manhattanHeuristic(self, position, goal, info={}):
+    def manhattanHeuristic(self, gameState, goal, info={}):
         "The Manhattan distance heuristic for a PositionSearchProblem"
-        x1, y1 = position
+        x1, y1 = gameState.getAgentState(self.index).getPosition()
         x2, y2 = goal
         return abs(x1 - x2) + abs(y1 - y2)
 #20190919
-    def simple_avoidEnemyHeurisitic(self, gameState,position,opponent):
+    def simple_avoidEnemyHeurisitic(self, gameState,position):
         enemy = self.getDefender(gameState)
         avoid = []
         if enemy is None:
             return 0
         for e in enemy:
-            if self.getMazeDistance(position, e.getPosition()) < 4:
+            if self.getMazeDistance(position, e.getPosition()) < 5:
                 avoid.append(40*self.getMazeDistance(position, e.getPosition()))
             else:
                 avoid.append(0)
@@ -199,25 +203,21 @@ class OffensiveDummyAgent(DummyAgent):
         closeCapsule = self.getcloseCapsule(gameState)
         foods = self.getFood(gameState).asList()
         closeFood = self.getCloseFood(gameState)
+        furtherFood = self.getFurtherFood(gameState)
         # back to the middle
         middle = self.getMiddle(gameState)
         middleDis = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), mi) for mi in middle]
         closeMiddle = [m for m, d in zip(middle, middleDis) if d == min(middleDis)]
+        furtherMiddle = [m for m, d in zip(middle, middleDis) if d == max(middleDis)]
+        enemy = self.getDefender(gameState)
         # policy
-        if closeCapsule is None and gameState.getAgentState(self.index).getPosition() in middle:
-            self.changePhase()
-        if self.phase == 1:
-            if closeCapsule is not None:
+        if closeCapsule is not None and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeCapsule) < 5:
                 return self.astarSearch(gameState, closeCapsule, self.simple_avoidEnemyHeurisitic)
-            elif len(foods) > 15:
-                return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
-            else:
-                return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         else:#small greedy algorithm 20190919
-            if gameState.getAgentState(self.index).numCarrying > 3:#if carry greater than 3, return
-                return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
-            else:
+            if foods is not None:
                 return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
+            else:
+                return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
 
 class DefensiveDummyAgent(DummyAgent):
     """
