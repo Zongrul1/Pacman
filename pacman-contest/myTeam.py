@@ -207,8 +207,7 @@ class DummyAgent(CaptureAgent):
 
     # 20190921
     def FoodHeuristic(self, location, foodGrid):
-        max = 0
-        return max
+        return 0
 
 
 class OffensiveDummyAgent(DummyAgent):
@@ -230,21 +229,20 @@ class OffensiveDummyAgent(DummyAgent):
         closeMiddle = [m for m, d in zip(middle, middleDis) if d == min(middleDis)]
         furtherMiddle = [m for m, d in zip(middle, middleDis) if d == max(middleDis)]
         enemy = self.getDefender(gameState)#escape
-        if enemy != None:
+        if enemy is not None:#scared time judge
             for defender in enemy:
                 if defender.scaredTimer > 10:
                     return self.astarSearch(gameState, closeFood, self.FoodHeuristic)
         if enemy is not None:
             for e in enemy:
-                if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 4 \
-                        and e.scaredTimer < 5:
+                if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 4:
                     return self.astarSearch(gameState, furtherFood, self.simple_avoidEnemyHeurisitic)
         if gameState.data.timeleft < 100 and gameState.getAgentState(
                 self.index).numCarrying > 1:  # if time is not enough
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         if len(self.getFood(gameState).asList()) <= 2: # almost win
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
-        if gameState.getAgentState(self.index).numCarrying > 5:# almost win
+        if gameState.getAgentState(self.index).numCarrying > 5 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 3:# carry too much
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         if closeCapsule is not None and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
                                                              closeCapsule) < 5:  # capsule
