@@ -208,10 +208,6 @@ class DummyAgent(CaptureAgent):
     # 20190921
     def FoodHeuristic(self, location, foodGrid):
         max = 0
-        for food in foodGrid.asList():
-            distance = self.getMazeDistance(location, food)
-            if distance > max:
-                max = distance
         return max
 
 
