@@ -232,11 +232,8 @@ class OffensiveDummyAgent(DummyAgent):
         enemy = self.getDefender(gameState)#escape
         if enemy != None:
             for defender in enemy:
-                if defender.scaredTimer > 0:
-                    if defender.scaredTimer > 10:
-                        return self.astarSearch(gameState, closeFood, self.FoodHeuristic)
-                    else:
-                        return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
+                if defender.scaredTimer > 10:
+                    return self.astarSearch(gameState, closeFood, self.FoodHeuristic)
         if enemy is not None:
             for e in enemy:
                 if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 4 \
