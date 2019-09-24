@@ -11,7 +11,8 @@
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
-
+import sys
+sys.path.append("teams/L.D.S/")
 from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
@@ -156,7 +157,15 @@ class DummyAgent(CaptureAgent):
             return None
         else:
             return closeFood[0]
-
+    # food-search 20190924
+    def getRandomFood(self, gameState):
+        foods = [food for food in self.getFood(gameState).asList()]
+        foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) for a in foods]
+        closeFood = [f for f, d in zip(foods, foodDistance) if d == min(foodDistance)]
+        if len(closeFood) == 0:
+            return None
+        else:
+            return random.choice(closeFood)
     def astarSearch(self, gameState, goal, heuristic):
         middle = self.getMiddle(gameState)
         middleDis = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), mi) for mi in middle]
@@ -217,6 +226,7 @@ class OffensiveDummyAgent(DummyAgent):
         closeCapsule = self.getcloseCapsule(gameState)
         foods = self.getFood(gameState).asList()
         closeFood = self.getCloseFood(gameState)
+        randomFood = self.getRandomFood(gameState)
         furtherFood = self.getFurtherFood(gameState)
         # back to the middle
         middle = self.getMiddle(gameState)
@@ -227,7 +237,7 @@ class OffensiveDummyAgent(DummyAgent):
         if enemy is not None:
             for e in enemy:
                 if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) <= 5:
-                    return self.astarSearch(gameState, self.home, self.simple_avoidEnemyHeurisitic)
+                    return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         # policy
         if gameState.data.timeleft < 100 and gameState.getAgentState(
                 self.index).numCarrying > 1:  # if time is not enough
