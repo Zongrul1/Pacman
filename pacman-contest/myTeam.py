@@ -54,7 +54,8 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 # Agents #
 ##########
-
+SAFE_FODD_REMAIN = 4
+FORCED_DEFEND_TICK = 4
 class DummyAgent(CaptureAgent):
     """
   A Dummy agent to serve as an example of the necessary agent structure.
@@ -141,7 +142,14 @@ class DummyAgent(CaptureAgent):
     # food-search 20190918
     def getCloseFood(self, gameState):
         foods = [food for food in self.getFood(gameState).asList()]
+        enemy = self.getDefender(gameState)#escape
         foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) for a in foods]
+        if enemy is not None:#position of enemy
+            if len(enemy)==1:
+                foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) + 1000/(self.getMazeDistance(enemy[0].getPosition(), a)+0.001) for a in foods]
+            else:
+                foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) + 1000/(self.getMazeDistance(enemy[0].getPosition(), a)+0.001)+
+                                1000/(self.getMazeDistance(enemy[1].getPosition(), a)+0.001) for a in foods]
         closeFood = [f for f, d in zip(foods, foodDistance) if d == min(foodDistance)]
         if len(closeFood) == 0:
             return None
@@ -199,7 +207,7 @@ class DummyAgent(CaptureAgent):
         if enemy is None:
             return 0
         for e in enemy:
-            if self.getMazeDistance(position, e.getPosition()) < 4:
+            if self.getMazeDistance(position, e.getPosition()) < 2:
                 avoid.append(9999)
             else:
                 avoid.append(0)
@@ -231,22 +239,22 @@ class OffensiveDummyAgent(DummyAgent):
         enemy = self.getDefender(gameState)#escape
         if enemy is not None:#scared time judge
             for defender in enemy:
-                if defender.scaredTimer > 10:
+                if defender.scaredTimer > 5:
                     return self.astarSearch(gameState, closeFood, self.FoodHeuristic)
+        if closeCapsule is not None and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
+                                                             closeCapsule) < 5:  # capsule
+            return self.astarSearch(gameState, closeCapsule, self.simple_avoidEnemyHeurisitic)
         if enemy is not None:
             for e in enemy:
-                if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 4:
+                if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 2:
                     return self.astarSearch(gameState, furtherFood, self.simple_avoidEnemyHeurisitic)
         if gameState.data.timeleft < 100 and gameState.getAgentState(
                 self.index).numCarrying > 1:  # if time is not enough
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         if len(self.getFood(gameState).asList()) <= 2: # almost win
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
-        if gameState.getAgentState(self.index).numCarrying > 5 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 3:# carry too much
+        if gameState.getAgentState(self.index).numCarrying > 3 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 3:# carry too much
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
-        if closeCapsule is not None and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
-                                                             closeCapsule) < 5:  # capsule
-            return self.astarSearch(gameState, closeCapsule, self.simple_avoidEnemyHeurisitic)
         else:  # food 20190919
             if foods is not None:
                 return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
@@ -255,86 +263,135 @@ class OffensiveDummyAgent(DummyAgent):
 
 
 class DefensiveDummyAgent(DummyAgent):
-    """
-  A reflex agent that keeps its side Pacman-free. Again,
-  this is to give you an idea of what a defensive agent
-  could be like.  It is not the best or only way to make
-  such an agent.
-  """
+    def __init__(self, index):
+        CaptureAgent.__init__(self, index)
+        self.target = None
+        self.lastTickFoodList = []
+        self.isFoodEaten = False
+        self.patrolDict = {}
+        self.tick = 0
+        self.gazeboDict = {}
+
+    def getLayoutInfo(self, gameState):
+
+        layoutInfo = []
+        layoutWidth = gameState.data.layout.width
+        layoutHeight = gameState.data.layout.height
+        layoutCentralX = (layoutWidth - 2) / 2
+        if not self.red:
+            layoutCentralX += 1
+        layoutCentralY = (layoutHeight - 2) / 2
+        layoutInfo.extend((layoutWidth, layoutHeight, layoutCentralX, layoutCentralY))
+        return layoutInfo
+
+    def setDefensiveArea(self, gameState):
+
+        layoutInfo = self.getLayoutInfo(gameState)
+
+        self.coreDefendingArea = []
+        for i in range(1, layoutInfo[1] - 1):
+            if not gameState.hasWall(layoutInfo[2], i):
+                self.coreDefendingArea.append((layoutInfo[2], i))
+
+        desiredSize = layoutInfo[3]
+        currentSize = len(self.coreDefendingArea)
+
+        while desiredSize < currentSize:
+            self.coreDefendingArea.remove(self.coreDefendingArea[0])
+            self.coreDefendingArea.remove(self.coreDefendingArea[-1])
+            currentSize = len(self.coreDefendingArea)
+        while len(self.coreDefendingArea) > 2:
+            # for i in range(currentSize/4):
+            self.coreDefendingArea.remove(self.coreDefendingArea[0])
+            self.coreDefendingArea.remove(self.coreDefendingArea[-1])
+        # if  len(self.coreDefendingArea) == 2:
+        # self.coreDefendingArea.remove(self.coreDefendingArea[0])
+
+    def registerInitialState(self, gameState):
+        CaptureAgent.registerInitialState(self, gameState)
+        self.distancer.getMazeDistances()
+
+        self.setDefensiveArea(gameState)
+
+    def isForcedDefendRequired(self, gameState):
+        candidateActions = []
+        actions = gameState.getLegalActions(self.index)
+        reversed_direction = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
+        actions.remove(Directions.STOP)
+        if reversed_direction in actions:
+            actions.remove(reversed_direction)
+
+        for a in actions:
+            new_state = gameState.generateSuccessor(self.index, a)
+            if not new_state.getAgentState(self.index).isPacman:
+                candidateActions.append(a)
+
+        if len(candidateActions) == 0:
+            self.tick = 0
+        else:
+            self.tick = self.tick + 1
+
+        if self.tick > FORCED_DEFEND_TICK or self.tick == 0:
+            candidateActions.append(reversed_direction)
+
+        return candidateActions
 
     def chooseAction(self, gameState):
-        """
-    Picks among the actions with the highest Q(s,a).
-    """
-        actions = gameState.getLegalActions(self.index)
 
-        # You can profile your evaluation time by uncommenting these lines
-        # start = time.time()
-        values = [self.evaluate(gameState, a) for a in actions]
-        # print 'eval time for agent %d: %.4f' % (self.index, time.time() - start)
+        currentTickFoodList = []
+        currentTickFoodList = self.getFoodYouAreDefending(gameState).asList()
 
-        maxValue = max(values)
-        bestActions = [a for a, v in zip(actions, values) if v == maxValue]
+        mypos = gameState.getAgentPosition(self.index)
+        if mypos == self.target:
+            self.target = None
+        # Get the cloest invader's position and set target as invader
+        opponentsIndices = []
+        threateningInvaderPos = []
+        cloestInvaders = []
+        minDistance = float("inf")
 
-        foodLeft = len(self.getFood(gameState).asList())
+        opponentsIndices = self.getOpponents(gameState)
+        for opponentIndex in opponentsIndices:
+            oppent = gameState.getAgentState(opponentIndex)
+            if oppent.isPacman and oppent.getPosition() != None:
+                oppentPos = oppent.getPosition()
+                threateningInvaderPos.append(oppentPos)
 
-        if foodLeft <= 2:
-            bestDist = 9999
-            for action in actions:
-                successor = self.getSuccessor(gameState, action)
-                pos2 = successor.getAgentPosition(self.index)
-                dist = self.getMazeDistance(self.start, pos2)
-                if dist < bestDist:
-                    bestAction = action
-                    bestDist = dist
-            return bestAction
+        if len(threateningInvaderPos) > 0:
+            for position in threateningInvaderPos:
+                distance = self.getMazeDistance(position, mypos)
+                if distance < minDistance:
+                    minDistance = distance
+                    cloestInvaders.append(position)
+            self.target = cloestInvaders[-1]
 
-        return random.choice(bestActions)
-
-    def getFeatures(self, gameState, action):
-        features = util.Counter()
-        successor = self.getSuccessor(gameState, action)
-
-        myState = successor.getAgentState(self.index)
-        myPos = myState.getPosition()
-
-        # Computes whether we're on defense (1) or offense (0)
-        features['onDefense'] = 1
-        if myState.isPacman: features['onDefense'] = 0
-
-        # Computes distance to invaders we can see
-        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-        invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
-        features['numInvaders'] = len(invaders)
-        if len(invaders) > 0:
-            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
-            features['invaderDistance'] = min(dists)
-
-        if action == Directions.STOP: features['stop'] = 1
-        rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
-        if action == rev: features['reverse'] = 1
-
-        return features
-
-    def getWeights(self, gameState, action):
-        return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10, 'stop': -100, 'reverse': -2}
-
-    def evaluate(self, gameState, action):
-        """
-    Computes a linear combination of features and feature weights
-    """
-        features = self.getFeatures(gameState, action)
-        weights = self.getWeights(gameState, action)
-        return features * weights
-
-    def getSuccessor(self, gameState, action):
-        """
-    Finds the next successor which is a grid position (location tuple).
-    """
-        successor = gameState.generateSuccessor(self.index, action)
-        pos = successor.getAgentState(self.index).getPosition()
-        if pos != nearestPoint(pos):
-            # Only half a grid position was covered
-            return successor.generateSuccessor(self.index, action)
+        # get the eaten food position
         else:
-            return successor
+            if len(self.lastTickFoodList) > 0 and len(currentTickFoodList) < len(self.lastTickFoodList):
+                eatenFood = set(self.lastTickFoodList) - set(currentTickFoodList)
+
+                self.target = eatenFood.pop()
+
+        self.lastTickFoodList = currentTickFoodList
+
+        if self.target == None:
+            if len(currentTickFoodList) <= SAFE_FODD_REMAIN:
+                highPriorityFood = currentTickFoodList + self.getCapsulesYouAreDefending(gameState)
+                self.target = random.choice(highPriorityFood)
+            else:
+                self.target = random.choice(self.coreDefendingArea)
+        # evaluates candiateActions and get the best
+        candidateActions = self.isForcedDefendRequired(gameState)
+        goodActions = []
+        fvalues = []
+
+        for a in candidateActions:
+            new_state = gameState.generateSuccessor(self.index, a)
+            newpos = new_state.getAgentPosition(self.index)
+            goodActions.append(a)
+            fvalues.append(self.getMazeDistance(newpos, self.target))
+
+        best = min(fvalues)
+        bestActions = [a for a, v in zip(goodActions, fvalues) if v == best]
+        bestAction = random.choice(bestActions)
+        return bestAction
