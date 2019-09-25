@@ -146,10 +146,10 @@ class DummyAgent(CaptureAgent):
         foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) for a in foods]
         if enemy is not None:#position of enemy
             if len(enemy)==1:
-                foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) + 1000/(self.getMazeDistance(enemy[0].getPosition(), a)+0.001) for a in foods]
+                foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) + 100/(self.getMazeDistance(enemy[0].getPosition(), a)+0.001) for a in foods]
             else:
-                foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) + 1000/(self.getMazeDistance(enemy[0].getPosition(), a)+0.001)+
-                                1000/(self.getMazeDistance(enemy[1].getPosition(), a)+0.001) for a in foods]
+                foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) + 100/(self.getMazeDistance(enemy[0].getPosition(), a)+0.001)+
+                                100/(self.getMazeDistance(enemy[1].getPosition(), a)+0.001) for a in foods]
         closeFood = [f for f, d in zip(foods, foodDistance) if d == min(foodDistance)]
         if len(closeFood) == 0:
             return None
@@ -242,12 +242,12 @@ class OffensiveDummyAgent(DummyAgent):
                 if defender.scaredTimer > 5:
                     return self.astarSearch(gameState, closeFood, self.FoodHeuristic)
         if closeCapsule is not None and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
-                                                             closeCapsule) < 5:  # capsule
+                                                             closeCapsule) < 2:  # capsule
             return self.astarSearch(gameState, closeCapsule, self.simple_avoidEnemyHeurisitic)
         if enemy is not None:
             for e in enemy:
                 if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 2:
-                    return self.astarSearch(gameState, furtherFood, self.simple_avoidEnemyHeurisitic)
+                    return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         if gameState.data.timeleft < 100 and gameState.getAgentState(
                 self.index).numCarrying > 1:  # if time is not enough
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
@@ -290,8 +290,8 @@ class DefensiveDummyAgent(DummyAgent):
 
         self.coreDefendingArea = []
         for i in range(1, layoutInfo[1] - 1):
-            if not gameState.hasWall(layoutInfo[2], i):
-                self.coreDefendingArea.append((layoutInfo[2], i))
+            if not gameState.hasWall(int(layoutInfo[2]), int(i)):
+                self.coreDefendingArea.append((int(layoutInfo[2]), int(i)))
 
         desiredSize = layoutInfo[3]
         currentSize = len(self.coreDefendingArea)
