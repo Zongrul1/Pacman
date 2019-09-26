@@ -183,7 +183,8 @@ class GameState:
     """
     Returns true if (x,y) has a wall, false otherwise.
     """
-    return self.data.layout.walls[x][y]
+    #return self.data.layout.walls[x][y]
+    return self.data.layout.walls[int(x)][int(y)]
 
   def isOver( self ):
     return self.data._win
