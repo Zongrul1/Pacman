@@ -99,11 +99,11 @@ class DummyAgent(CaptureAgent):
     # get condition of enemies
     def getOffender(self, gameState):
         enemies = [gameState.getAgentState(o) for o in self.getOpponents(gameState)]
-        offerder = [a for a in enemies if a.isPacman and a.getPosition() is not None]
-        if len(offerder) == 0:
+        offerders = [a for a in enemies if a.isPacman and a.getPosition() is not None]
+        if len(offerders) == 0:
             return None
         else:
-            return offerder
+            return offerders
 
     def getDefender(self, gameState):
         enemies = [gameState.getAgentState(o) for o in self.getOpponents(gameState)]
@@ -197,6 +197,25 @@ class DummyAgent(CaptureAgent):
             else:
                 avoid.append(0)
         return max(avoid)
+    # 20190930
+    def simple_avoidAllEnemyHeurisitic(self, gameState, position):
+        o = self.getOffender(gameState)
+        d = self.getDefender(gameState)
+        if d is None and o is None:
+            return 0;
+        if d is None:
+            enemy = o;
+        elif o is None:
+            enemy = d;
+        else:
+            enemy = o + d
+        avoid = []
+        for e in enemy:
+            if self.getMazeDistance(position, e.getPosition()) < 2:
+                avoid.append(9999)
+            else:
+                avoid.append(0)
+        return max(avoid)
 
     # 20190921
     def FoodHeuristic(self, location, foodGrid):
@@ -214,22 +233,24 @@ class OffensiveDummyAgent(DummyAgent):
         middle = self.getMiddle(gameState)
         middleDis = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), mi) for mi in middle]
         closeMiddle = [m for m, d in zip(middle, middleDis) if d == min(middleDis)]
-        furtherMiddle = [m for m, d in zip(middle, middleDis) if d == max(middleDis)]
-        enemy = self.getDefender(gameState)#escape
-        if enemy is not None:#scared time judge
+        if gameState.data.timeleft < 150 and gameState.getAgentState(
+                self.index).numCarrying > 0 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 3:  # if time is not enough 20190926
+            return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
+        # enemy-scared
+        enemy = self.getDefender(gameState)  # escape
+        if enemy is not None:  # scared time judge
             for defender in enemy:
                 if defender.scaredTimer > 10:
                     return self.astarSearch(gameState, closeFood, self.FoodHeuristic)
+        # capsule
         if closeCapsule is not None and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
-                                                             closeCapsule) < 2:  # capsule
+                                                             closeCapsule) < 2:
             return self.astarSearch(gameState, closeCapsule, self.simple_avoidEnemyHeurisitic)
+        # enemy
         if enemy is not None:
             for e in enemy:
                 if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 2:
                     return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
-        if gameState.data.timeleft < 100 and gameState.getAgentState(
-                self.index).numCarrying > 0 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 3:  # if time is not enough 20190926
-            return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         if len(self.getFood(gameState).asList()) <= 2: # almost win
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         if gameState.getAgentState(self.index).numCarrying > 3 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 3:# carry too much
@@ -243,22 +264,9 @@ class OffensiveDummyAgent(DummyAgent):
 
 class DefensiveDummyAgent(DummyAgent):
     def chooseAction(self, gameState):
-        enemy = self.getOffender(gameState)
-        middle = self.getMiddle(gameState)
-        foodList = self.getFoodYouAreDefending(gameState).asList()
-        '''
-        if len(self.initFood) - len(foodList) > 0:#escape init defend
-            self.init_defend = False
-        if enemy is None and self.init_defend is True:#init defend
-            return self.astarSearch(gameState, middle[int(len(middle)/2)], self.manhattanHeuristic)
-        '''
+        #defendence
         actions = gameState.getLegalActions(self.index)
-
-        # You can profile your evaluation time by uncommenting these lines
-        # start = time.time()
         values = [self.evaluate(gameState, a) for a in actions]
-        # print 'eval time for agent %d: %.4f' % (self.index, time.time() - start)
-
         maxValue = max(values)
         bestActions = [a for a, v in zip(actions, values) if v == maxValue]
 
@@ -314,6 +322,8 @@ class DefensiveDummyAgent(DummyAgent):
         if len(invaders) > 0:
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
             features['invaderDistance'] = min(dists)
+        #if myState.scaredTimer > 0 and features['invaderDistance'] < 2:
+            #features['invaderDistance'] = -features['invaderDistance']
 
         # Computes distance to lost food 20190926
         foodList = self.getFoodYouAreDefending(gameState).asList()
@@ -323,6 +333,8 @@ class DefensiveDummyAgent(DummyAgent):
         if len(self.eatenFood) > 0:
             dists = self.getMazeDistance(myPos, self.eatenFood[-1])#latest eatenfood
             features['eatenFood'] = dists
+            if(myPos == self.eatenFood[-1]):
+                self.eatenFood = [] #20190930 clear eatenFood list to back to the middle
 
         if action == Directions.STOP: features['stop'] = 1
         rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
