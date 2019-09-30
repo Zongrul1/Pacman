@@ -227,12 +227,11 @@ class OffensiveDummyAgent(DummyAgent):
         closeCapsule = self.getcloseCapsule(gameState)
         foods = self.getFood(gameState).asList()
         closeFood = self.getCloseFood(gameState)
-        randomFood = self.getRandomFood(gameState)
-        furtherFood = self.getFurtherFood(gameState)
         # back to the middle
         middle = self.getMiddle(gameState)
         middleDis = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), mi) for mi in middle]
         closeMiddle = [m for m, d in zip(middle, middleDis) if d == min(middleDis)]
+        #almost no time
         if gameState.data.timeleft < 150 and gameState.getAgentState(
                 self.index).numCarrying > 0 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 3:  # if time is not enough 20190926
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
@@ -251,13 +250,18 @@ class OffensiveDummyAgent(DummyAgent):
             for e in enemy:
                 if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 2:
                     return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
-        if len(self.getFood(gameState).asList()) <= 2: # almost win
+        # almost win
+        if len(self.getFood(gameState).asList()) <= 2:
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
-        if gameState.getAgentState(self.index).numCarrying > 3 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 3:# carry too much
+        # carry too much
+        if gameState.getAgentState(self.index).numCarrying > 3 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 3:
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         else:  # food 20190919
             if foods is not None:
-                return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
+                if gameState.getAgentState(self.index).scaredTimer > 0:#when scared avoid invader 20190930
+                    return self.astarSearch(gameState, closeFood, self.simple_avoidAllEnemyHeurisitic)
+                else:
+                    return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
             else:
                 return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
 
