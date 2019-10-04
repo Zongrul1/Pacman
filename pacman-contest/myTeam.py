@@ -243,7 +243,7 @@ class OffensiveDummyAgent(DummyAgent):
                     return self.astarSearch(gameState, closeFood, self.FoodHeuristic)
         # capsule
         if closeCapsule is not None and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
-                                                             closeCapsule) < 2:
+                                                             closeCapsule) < 3:
             return self.astarSearch(gameState, closeCapsule, self.simple_avoidEnemyHeurisitic)
         # enemy
         if enemy is not None:
