@@ -248,7 +248,7 @@ class OffensiveDummyAgent(DummyAgent):
         # enemy
         if enemy is not None:
             for e in enemy:
-                if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 2:
+                if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 3:
                     return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         # almost win
         if len(self.getFood(gameState).asList()) <= 2:
@@ -273,7 +273,10 @@ class DefensiveDummyAgent(DummyAgent):
         values = [self.evaluate(gameState, a) for a in actions]
         maxValue = max(values)
         bestActions = [a for a, v in zip(actions, values) if v == maxValue]
-
+        closeFood = self.getCloseFood(gameState)
+        #20191004 steal
+        if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) < 3 and gameState.getAgentState(self.index).numCarrying < 3:
+            return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
         foodLeft = len(self.getFood(gameState).asList())
 
         if foodLeft <= 2:
