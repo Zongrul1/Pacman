@@ -254,7 +254,7 @@ class OffensiveDummyAgent(DummyAgent):
         if len(self.getFood(gameState).asList()) <= 2:
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         # carry too much
-        if gameState.getAgentState(self.index).numCarrying > 3 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 4:
+        if gameState.getAgentState(self.index).numCarrying > 3 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 5:
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         else:  # food 20190919
             if foods is not None:
