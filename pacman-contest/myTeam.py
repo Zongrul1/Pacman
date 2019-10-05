@@ -129,7 +129,7 @@ class DummyAgent(CaptureAgent):
         enemy = self.getDefender(gameState)#escape
         foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) for a in foods]
         weight = 500
-        if enemy is not None and enemy[0].scaredTimer < 10:#position of enemy 20190926
+        if enemy is not None and enemy[0].scaredTimer < 5:#position of enemy 20190926
             if len(enemy)==1:
                 foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) + weight/(self.getMazeDistance(enemy[0].getPosition(), a)+0.001) for a in foods]
             else:
@@ -238,8 +238,8 @@ class OffensiveDummyAgent(DummyAgent):
         # enemy-scared
         enemy = self.getDefender(gameState)  # escape
         if enemy is not None:  # scared time judge
-            for defender in enemy:
-                if defender.scaredTimer > 10:
+            for e in enemy:
+                if e.scaredTimer > 10:
                     return self.astarSearch(gameState, closeFood, self.FoodHeuristic)
         # capsule
         if closeCapsule is not None and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
@@ -248,7 +248,7 @@ class OffensiveDummyAgent(DummyAgent):
         # enemy
         if enemy is not None:
             for e in enemy:
-                if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 3:
+                if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 3 and e.scaredTimer < 10:
                     return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         # almost win
         if len(self.getFood(gameState).asList()) <= 2:
