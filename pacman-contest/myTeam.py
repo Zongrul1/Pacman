@@ -128,7 +128,7 @@ class DummyAgent(CaptureAgent):
         foods = [food for food in self.getFood(gameState).asList()]
         enemy = self.getDefender(gameState)#escape
         foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) for a in foods]
-        weight = 500
+        weight = 100
         if enemy is not None and enemy[0].scaredTimer < 9:#position of enemy 20190926
             if len(enemy)==1:
                 foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) + weight/(self.getMazeDistance(enemy[0].getPosition(), a)+0.001) for a in foods]
@@ -231,6 +231,9 @@ class OffensiveDummyAgent(DummyAgent):
         middle = self.getMiddle(gameState)
         middleDis = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), mi) for mi in middle]
         closeMiddle = [m for m, d in zip(middle, middleDis) if d == min(middleDis)]
+        #no time
+        if gameState.data.timeleft < 50:
+            return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         #almost no time
         if gameState.data.timeleft < 150 and gameState.getAgentState(
                 self.index).numCarrying > 0 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 3:  # if time is not enough 20190926
@@ -242,19 +245,24 @@ class OffensiveDummyAgent(DummyAgent):
                 if e.scaredTimer > 9:
                     return self.astarSearch(gameState, closeFood, self.FoodHeuristic)
         # capsule
-        if closeCapsule is not None and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
-                                                             closeCapsule) < 3:
-            return self.astarSearch(gameState, closeCapsule, self.simple_avoidEnemyHeurisitic)
+        if enemy is not None:
+            if closeCapsule is not None and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
+                                                             closeCapsule) < 5:
+                return self.astarSearch(gameState, closeCapsule, self.simple_avoidEnemyHeurisitic)
         # enemy
         if enemy is not None:
             for e in enemy:
-                if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 3:
+                if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), e.getPosition()) < 3 and gameState.getAgentState(self.index).numCarrying > 0:
                     return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         # almost win
         if len(self.getFood(gameState).asList()) <= 2:
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         # carry too much
-        if gameState.getAgentState(self.index).numCarrying > 3 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 5:
+        if enemy is None:#20191006 if no e,eat
+            return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
+        if gameState.getAgentState(self.index).numCarrying > 10:#20191006
+            return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
+        if gameState.getAgentState(self.index).numCarrying > 1 and self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) > 5:
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         else:  # food 20190919
             if foods is not None:
