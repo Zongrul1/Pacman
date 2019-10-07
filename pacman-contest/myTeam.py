@@ -128,7 +128,7 @@ class DummyAgent(CaptureAgent):
         foods = [food for food in self.getFood(gameState).asList()]
         enemy = self.getDefender(gameState)#escape
         foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) for a in foods]
-        weight = 400
+        weight = 500
         if enemy is not None and enemy[0].scaredTimer < 9:#position of enemy 20190926
             if len(enemy)==1:
                 foodDistance = [self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), a) + weight/(self.getMazeDistance(enemy[0].getPosition(), a)+0.001) for a in foods]
