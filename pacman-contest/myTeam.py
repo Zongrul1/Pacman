@@ -256,7 +256,7 @@ class OffensiveDummyAgent(DummyAgent):
         foods = self.getFood(gameState).asList()
         closeFood = self.getCloseFood(gameState)
         # back to the middle
-        closeMiddle = self.getMiddle(gameState)
+        closeMiddle = self.getCloseMiddle(gameState)
         # no time
         if gameState.data.timeleft < 50:
             return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
@@ -312,7 +312,7 @@ class OffensiveDummyAgent(DummyAgent):
 class DefensiveDummyAgent(DummyAgent):
     def chooseAction(self, gameState):
         # back to the middle
-        closeMiddle = self.getMiddle(gameState)
+        closeMiddle = self.getCloseMiddle(gameState)
         # defendence
         actions = gameState.getLegalActions(self.index)
         values = [self.evaluate(gameState, a) for a in actions]
