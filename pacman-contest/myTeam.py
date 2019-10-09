@@ -261,7 +261,7 @@ class OffensiveDummyAgent(DummyAgent):
         if enemy is not None:
             for e in enemy:
                 if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
-                                        e.getPosition()) < 3 and gameState.getAgentState(self.index).numCarrying > 0:
+                                        e.getPosition()) < 3 and gameState.getAgentState(self.index).numCarrying > 1:#20191008 test
                     return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
         # almost win
         if len(self.getFood(gameState).asList()) <= 2:
@@ -306,7 +306,7 @@ class DefensiveDummyAgent(DummyAgent):
                     if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(),
                                             e.getPosition()) < 3:
                         return self.astarSearch(gameState, closeMiddle[0], self.simple_avoidEnemyHeurisitic)
-            if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) < 5:
+            if self.getMazeDistance(gameState.getAgentState(self.index).getPosition(), closeFood) < 10:#20191009 test
                 return self.astarSearch(gameState, closeFood, self.simple_avoidEnemyHeurisitic)
         foodLeft = len(self.getFood(gameState).asList())
 
