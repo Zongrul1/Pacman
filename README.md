@@ -12,4 +12,4 @@ Zheng Shi zsshi@student.unimelb.edu.au 979554
 
 Zihan Deng zdde@student.unimelb.edu.au 983358
 
-More details are in the wiki
+More details are in the wiki:https://gitlab.eng.unimelb.edu.au/947539/comp90054-pacman/wikis/home
