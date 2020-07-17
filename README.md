@@ -1,15 +1,2 @@
 # UoM COMP90054 AI Planning for Autonomy - Pacman Project 
-
-Team name
-
-L.D.S
-
-Team member
-
-Zongru Li zongrul1@student.unimelb.edu.au 947539 
-
-Zheng Shi zsshi@student.unimelb.edu.au 979554
-
-Zihan Deng zdde@student.unimelb.edu.au 983358
-
-More details are in the wiki:https://gitlab.eng.unimelb.edu.au/947539/comp90054-pacman/wikis/home
+<video src="./Presentation/video.mp4" width="800px" height="600px" controls="controls"></video>
